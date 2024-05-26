@@ -34,7 +34,8 @@ int main(void)
         else if ((player_paddle.y + 300) <= screenHeight && IsKeyDown(KEY_DOWN)) player_paddle.y += paddle_speed;
 
         //ai movement stuff here
-
+        if ((ai_paddle.y >= 0) && ai_paddle.y > (ball_possition.y + 50)) ai_paddle.y -= paddle_speed;
+        else if ((ai_paddle.y + 300) <= screenHeight && ai_paddle.y < (ball_possition.y - 350)) ai_paddle.y += paddle_speed;
         //ball movement here
         ball_possition.x += ball_speed.x;
         ball_possition.y += ball_speed.y;
