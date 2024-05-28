@@ -1,6 +1,9 @@
 #include "raylib.h"
 #include <unistd.h>
 
+#define BORDER 3
+#define MAX_OPTIONS 4
+
 int main(void)
 {   
     //window settings and what not
@@ -8,9 +11,9 @@ int main(void)
     const int screenHeight = 800;
     const Rectangle playingField = { 0, (screenHeight - (screenHeight * 0.9)), screenWidth , (screenHeight * 0.9)};
     const Rectangle scoreField = {0, 0, screenWidth , (screenHeight * 0.1)};
-    int border = 3; //border line thickness
-    int gameStage = 0; //0 for paused just started or in between rouns, 1 for active ,2 for game over
-    
+    int gameStage = 0; //0 for just started, 1 for active ,2 for game over and 3 for in between rounds
+    int selectDificulty = 0; //0 for easy, 1 for mid and 2 for hard 3 for exiting
+    const char *menuOptions[MAX_OPTIONS] = { "Easy" , "Medium", "Hard", "Exit"};
     InitWindow(screenWidth, screenHeight, "Pong Clone");
     //score initializers
     int aiScore = 0;
@@ -21,9 +24,7 @@ int main(void)
     Rectangle player_paddle = { 5, 400, 20, 150 };
     Rectangle ai_paddle = { (screenWidth - 25), 400, 20, 150 };
     float playerPaddleSpeed = 8.0f;
-    float aiPaddleSpeedEasy = 3.5f;
-    float aiPaddleSpeedMid = 5.0f;
-    float aiPaddleSpeedHard = 7.0f;
+    float aiPaddleSpeed[3] = {3.5f , 5.0f, 7.0f };
     //ball settings
     float ball_size = 10.0f;
     float startingBallSpeed = 4.5f;
@@ -41,11 +42,26 @@ int main(void)
     while (!WindowShouldClose())
     {
         //debugging stuff here
-        if (IsKeyPressed(KEY_SPACE) && gameStage != 2){
+        if (gameStage == 0 && IsKeyPressed(KEY_DOWN) && selectDificulty <= 3) {selectDificulty++;}
+        if (gameStage == 0 && IsKeyPressed(KEY_DOWN) && selectDificulty == 4) {selectDificulty = 0;}
+        if (gameStage == 0 && IsKeyPressed(KEY_UP) && selectDificulty >= 0) {selectDificulty--;}
+        if (gameStage == 0 && IsKeyPressed(KEY_UP) && selectDificulty == -1) {selectDificulty = 3;}
+        if (gameStage == 0 && IsKeyPressed(KEY_ENTER) && selectDificulty <= 2) {
+
             gameStage = 1;
         }
-        if(IsKeyPressed(KEY_SPACE) && gameStage == 2){
+        else if (gameStage == 0 && selectDificulty == 3 && IsKeyPressed(KEY_ENTER))
+        {
+            EndDrawing();
+            CloseWindow();
+            return 0;
+        }
+
+        if (IsKeyPressed(KEY_ENTER) && gameStage == 3){
             gameStage = 1;
+        }
+        if(IsKeyPressed(KEY_ENTER) && gameStage == 2){
+            gameStage = 0;
             aiScore = 0;
             playerScore = 0;
             ball_possition = starting_ball_possition;
@@ -54,12 +70,12 @@ int main(void)
         }
         if (gameStage == 1){time_since_last_collision += GetFrameTime();
         //player movement stuff here
-        if (player_paddle.y >= (playingField.y + border) && IsKeyDown(KEY_UP)) player_paddle.y -= playerPaddleSpeed;
+        if (player_paddle.y >= (playingField.y + BORDER) && IsKeyDown(KEY_UP)) player_paddle.y -= playerPaddleSpeed;
         else if ((player_paddle.y + 150) <= screenHeight && IsKeyDown(KEY_DOWN)) player_paddle.y += playerPaddleSpeed;
 
         //ai movement stuff here
-        if ((ai_paddle.y >= 0) && ai_paddle.y > (ball_possition.y + 5)) ai_paddle.y -= aiPaddleSpeedMid;
-        else if ((ai_paddle.y + 150) <= screenHeight && ai_paddle.y < (ball_possition.y - 155)) ai_paddle.y += aiPaddleSpeedMid;
+        if ((ai_paddle.y >= 0) && ai_paddle.y > (ball_possition.y + 5)) ai_paddle.y -= aiPaddleSpeed[selectDificulty];
+        else if ((ai_paddle.y + 150) <= screenHeight && ai_paddle.y < (ball_possition.y - 155)) ai_paddle.y += aiPaddleSpeed[selectDificulty];
         //ball movement here
         ball_possition.x += ball_speed.x;
         ball_possition.y += ball_speed.y;
@@ -92,7 +108,7 @@ int main(void)
             }
             else
             {
-                gameStage = 0;
+                gameStage = 3;
             }
             //for debugging
         }
@@ -106,7 +122,7 @@ int main(void)
             }
             else
             {
-                gameStage = 0;
+                gameStage = 3;
             }
         }}
         //drawing stuff here
@@ -115,29 +131,43 @@ int main(void)
             ClearBackground(DARKGRAY);
 
 
-            DrawText(TextFormat("%d", aiScore),(screenWidth * 0.75), (screenHeight * 0.02), 30, WHITE);
-            DrawText(TextFormat("%d",playerScore),(screenWidth * 0.25), (screenHeight * 0.02), 30, WHITE);
-
-            DrawRectangleLinesEx(playingField,border,BLACK);
-            DrawRectangleLinesEx(scoreField,border,BLACK);
-            DrawLineEx((Vector2){screenWidth / 2, 0}, (Vector2){screenWidth / 2, screenHeight * 0.1f}, (border * 2), BLACK);
-            DrawRectangleRec(player_paddle, BLACK);
-            DrawCircleV(ball_possition, ball_size,BLACK);
-            DrawRectangleRec(ai_paddle, BLACK);
             if (gameStage == 0){
-                DrawText("Press SPACE to start game", 250, (screenHeight / 2.2), 50, WHITE);
+                for (int i = 0; i < MAX_OPTIONS; i++)
+                {
+                    if (i == selectDificulty)
+                        {
+                            DrawText(menuOptions[i], screenWidth / 2 - MeasureText(menuOptions[i], 20) / 2, screenHeight / 2 + i * 30, 20, RED);
+                        }
+                    else
+                        {
+                            DrawText(menuOptions[i], screenWidth / 2 - MeasureText(menuOptions[i], 20) / 2, screenHeight / 2 + i * 30, 20, BLACK);
+                        }
+                }
             }
+            if (gameStage == 1 || gameStage == 3){
+                if (gameStage == 3){
+                    DrawText("Press ENTER to start round", 240, (screenHeight / 2.2), 50, WHITE);
+                }
+                DrawText(TextFormat("%d", aiScore),(screenWidth * 0.75), (screenHeight * 0.02), 30, WHITE);
+                DrawText(TextFormat("%d",playerScore),(screenWidth * 0.25), (screenHeight * 0.02), 30, WHITE);
+                DrawRectangleLinesEx(playingField,BORDER,BLACK);
+                DrawRectangleLinesEx(scoreField,BORDER,BLACK);
+                DrawLineEx((Vector2){screenWidth / 2, 0}, (Vector2){screenWidth / 2, screenHeight * 0.1f}, (BORDER * 2), BLACK);
+                DrawRectangleRec(player_paddle, BLACK);
+                DrawCircleV(ball_possition, ball_size,BLACK);
+                DrawRectangleRec(ai_paddle, BLACK);
+                }
             if (gameStage == 2 && playerScore == 3)
             {
                 DrawText("Game Over", 480, (screenHeight / 4), 50, WHITE);
                 DrawText("You WIN", 510, (screenHeight / 3), 50, WHITE);
-                DrawText("Press SPACE to start over", 240, (screenHeight / 2.2), 50, WHITE);
+                DrawText("Press ENTER to start over", 240, (screenHeight / 2.2), 50, WHITE);
             }
             if (gameStage == 2 && aiScore == 3)
             {
                 DrawText("Game Over", 480, (screenHeight / 4), 50, WHITE);
                 DrawText("You LOSE", 490, (screenHeight / 3), 50, WHITE);
-                DrawText("Press SPACE to start over", 240, (screenHeight / 2.2), 50, WHITE);
+                DrawText("Press ENTER to start over", 240, (screenHeight / 2.2), 50, WHITE);
             }
             
 
